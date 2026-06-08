@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Market Data Analysis Dashboard</title>
+    
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons (FontAwesome) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Plotly.js CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+</head>
+<body>
+    <!-- Top Decorative Glow -->
+    <div class="glow-bg"></div>
+
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="logo">
+            <i class="fa-solid fa-chart-line-up logo-icon"></i>
+            <span>Quant<span class="logo-accent">Forge</span> AI</span>
+        </div>
+        
+        <!-- Search Engine -->
+        <div class="search-container">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-input" placeholder="Search ticker or company name (e.g. AAPL, Tesla)..." autocomplete="off">
+                <button id="search-btn" class="btn-primary">Search</button>
+            </div>
+            <div id="autocomplete-list" class="autocomplete-items"></div>
+        </div>
+        
+        <!-- Controls & Mode -->
+        <div class="header-actions">
+            <button id="btn-export-csv" class="btn-secondary" title="Export current view to CSV">
+                <i class="fa-solid fa-file-csv"></i> Export CSV
+            </button>
+            <button id="btn-print" class="btn-secondary" title="Print/Save Analysis Report" onclick="window.print()">
+                <i class="fa-solid fa-print"></i> Print Report
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Container -->
+    <main class="dashboard-container">
+        
+        <!-- Left Sidebar: Controls & Ticker Stats -->
+        <aside class="sidebar">
+            <!-- Ticker Profile Card -->
+            <div class="glass-card ticker-profile-card">
+                <div class="ticker-header-info">
+                    <div>
+                        <h2 id="meta-symbol" class="ticker-symbol">AAPL</h2>
+                        <h3 id="meta-name" class="ticker-name">Apple Inc.</h3>
+                    </div>
+                    <span id="meta-sector" class="ticker-sector-tag">Technology</span>
+                </div>
+                
+                <div class="price-container">
+                    <div id="meta-price" class="current-price">$0.00</div>
+                    <div id="meta-change-container" class="price-change positive">
+                        <i id="meta-change-icon" class="fa-solid fa-caret-up"></i>
+                        <span id="meta-change">$0.00 (0.00%)</span>
+                    </div>
+                </div>
+                
+                <p id="meta-description" class="ticker-description-snippet">
+                    Loading company details...
+                </p>
+                <button id="btn-read-more" class="btn-text">Read More <i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+
+            <!-- Chart Options Panel -->
+            <div class="glass-card controls-card">
+                <h3><i class="fa-solid fa-sliders"></i> Chart Options</h3>
+                
+                <!-- Timeframe Selector -->
+                <div class="control-group">
+                    <label>Timeframe</label>
+                    <div class="timeframe-buttons">
+                        <button class="btn-timeframe" data-period="1d">1D</button>
+                        <button class="btn-timeframe" data-period="5d">5D</button>
+                        <button class="btn-timeframe" data-period="1m">1M</button>
+                        <button class="btn-timeframe" data-period="3m">3M</button>
+                        <button class="btn-timeframe" data-period="6m">6M</button>
+                        <button class="btn-timeframe active" data-period="1y">1Y</button>
+                        <button class="btn-timeframe" data-period="5y">5Y</button>
+                        <button class="btn-timeframe" data-period="max">MAX</button>
+                    </div>
+                </div>
+
+                <!-- Chart Type Selector -->
+                <div class="control-group">
+                    <label>Chart Style</label>
+                    <div class="segmented-control">
+                        <button id="btn-style-candle" class="btn-segment active"><i class="fa-solid fa-chart-candlestick"></i> Candlestick</button>
+                        <button id="btn-style-line" class="btn-segment"><i class="fa-solid fa-chart-line"></i> Line Chart</button>
+                    </div>
+                </div>
+
+                <!-- Technical Indicator Toggles -->
+                <div class="control-group">
+                    <label>Overlays</label>
+                    <div class="indicator-toggles">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="toggle-sma20" checked>
+                            <span class="checkmark"></span>
+                            SMA 20 <span class="indicator-color sma20"></span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="toggle-sma50">
+                            <span class="checkmark"></span>
+                            SMA 50 <span class="indicator-color sma50"></span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="toggle-sma200">
+                            <span class="checkmark"></span>
+                            SMA 200 <span class="indicator-color sma200"></span>
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="toggle-bb">
+                            <span class="checkmark"></span>
+                            Bollinger Bands (20, 2) <span class="indicator-color bb"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Suggestion Tickers -->
+            <div class="glass-card suggestions-card">
+                <h3><i class="fa-solid fa-fire"></i> Popular Tickers</h3>
+                <div class="suggestion-list">
+                    <button class="suggestion-tag" data-symbol="AAPL">AAPL</button>
+                    <button class="suggestion-tag" data-symbol="MSFT">MSFT</button>
+                    <button class="suggestion-tag" data-symbol="GOOGL">GOOGL</button>
+                    <button class="suggestion-tag" data-symbol="NVDA">NVDA</button>
+                    <button class="suggestion-tag" data-symbol="TSLA">TSLA</button>
+                    <button class="suggestion-tag" data-symbol="AMZN">AMZN</button>
+                    <button class="suggestion-tag" data-symbol="META">META</button>
+                    <button class="suggestion-tag" data-symbol="BTC-USD">BTC-USD</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Side: Interactive Tabs & Visualization -->
+        <section class="main-content">
+            
+            <!-- Navigation Tabs -->
+            <nav class="navigation-tabs">
+                <button class="tab-link active" data-tab="tab-analysis">
+                    <i class="fa-solid fa-chart-area"></i> Technical Analysis
+                </button>
+                <button class="tab-link" data-tab="tab-forecast">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI Price Prediction
+                </button>
+                <button class="tab-link" data-tab="tab-comparison">
+                    <i class="fa-solid fa-code-compare"></i> Stock Comparison
+                </button>
+            </nav>
+
+            <!-- Loading Spinner Overlay -->
+            <div id="loader-overlay" class="loader-overlay hidden">
+                <div class="spinner-box">
+                    <div class="double-bounce1"></div>
+                    <div class="double-bounce2"></div>
+                </div>
+                <p>Analyzing financial model...</p>
+            </div>
+
+            <!-- Error Notification Banner -->
+            <div id="error-banner" class="error-banner hidden">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span id="error-message">Error fetching stock data. Please check ticker symbol.</span>
+                <button class="error-close-btn" onclick="this.parentElement.classList.add('hidden')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Tab 1: Technical Analysis -->
+            <div id="tab-analysis" class="tab-content active">
+                
+                <!-- Financial Metrics Summary Bar -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Market Cap</span>
+                        <span id="metric-mcap" class="metric-value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">P/E Ratio</span>
+                        <span id="metric-pe" class="metric-value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Dividend Yield</span>
+                        <span id="metric-div" class="metric-value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Volume</span>
+                        <span id="metric-volume" class="metric-value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Avg Volume</span>
+                        <span id="metric-avgvolume" class="metric-value">-</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">52W Range</span>
+                        <span id="metric-52week" class="metric-value">-</span>
+                    </div>
+                </div>
+
+                <!-- Main Chart Wrapper -->
+                <div class="chart-container glass-card">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-magnifying-glass-chart"></i> Interactive Price & Volume Chart</h3>
+                        <span class="chart-status-badge"><i class="fa-solid fa-circle"></i> Live Data Feed</span>
+                    </div>
+                    <div id="main-price-chart" class="plotly-chart"></div>
+                </div>
+
+                <!-- Indicators Grid (RSI & MACD) -->
+                <div class="indicators-grid">
+                    <!-- RSI Chart -->
+                    <div class="chart-container glass-card">
+                        <div class="chart-header">
+                            <h3>RSI (Relative Strength Index - 14)</h3>
+                            <span id="rsi-val-badge" class="badge-neutral">Neutral: 50.0</span>
+                        </div>
+                        <div id="rsi-chart" class="plotly-chart small-chart"></div>
+                    </div>
+                    
+                    <!-- MACD Chart -->
+                    <div class="chart-container glass-card">
+                        <div class="chart-header">
+                            <h3>MACD (Moving Average Convergence/Divergence)</h3>
+                            <span id="macd-val-badge" class="badge-neutral">Signal Line</span>
+                        </div>
+                        <div id="macd-chart" class="plotly-chart small-chart"></div>
+                    </div>
+                </div>
+
+                <!-- Technical Analytics Panel (AI Summary Indicator Values) -->
+                <div class="glass-card signal-summary-card">
+                    <h3><i class="fa-solid fa-gauge-high"></i> Quantitative Signal Summary</h3>
+                    <div class="signal-gauge-container">
+                        <div class="gauge-card">
+                            <span class="gauge-title">RSI Indicator State</span>
+                            <div id="gauge-rsi-pill" class="signal-pill neutral">Neutral</div>
+                            <p id="gauge-rsi-desc" class="gauge-explanation">RSI is currently inside the normal range (30-70), signifying no immediate overbought or oversold conditions.</p>
+                        </div>
+                        <div class="gauge-card">
+                            <span class="gauge-title">MACD Crossover State</span>
+                            <div id="gauge-macd-pill" class="signal-pill neutral">No Crossover</div>
+                            <p id="gauge-macd-desc" class="gauge-explanation">The MACD line is trading closely to the signal line, indicating consolidation or weak momentum.</p>
+                        </div>
+                        <div class="gauge-card">
+                            <span class="gauge-title">Bollinger Bands Deviation</span>
+                            <div id="gauge-bb-pill" class="signal-pill neutral">Inside Bands</div>
+                            <p id="gauge-bb-desc" class="gauge-explanation">The current price is resting comfortably within the standard upper and lower boundaries, indicating low immediate volatility stress.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: AI Price Prediction -->
+            <div id="tab-forecast" class="tab-content">
+                <div class="glass-card forecast-intro-card">
+                    <div class="forecast-intro-header">
+                        <h2><i class="fa-solid fa-wand-magic-sparkles"></i> AI-Powered Trend Extrapolation Model</h2>
+                        <div id="forecast-signal-pill" class="signal-pill large bullish">Bullish Trend</div>
+                    </div>
+                    <p class="forecast-desc">
+                        Our model uses a **Polynomial Ridge Regression** algorithm trained on the past 2 years of daily trading data. It models the core price trend (quadratic components) adjusted for day-of-week seasonality, and projects prices for the next **30 business days**. 
+                    </p>
+                    <div class="forecast-stats-grid">
+                        <div class="forecast-stat-card">
+                            <span class="stat-label">Last Close Price</span>
+                            <span id="forecast-last-close" class="stat-value">$0.00</span>
+                        </div>
+                        <div class="forecast-stat-card">
+                            <span class="stat-label">30-Day Project Price</span>
+                            <span id="forecast-projected" class="stat-value">$0.00</span>
+                        </div>
+                        <div class="forecast-stat-card">
+                            <span class="stat-label">Estimated Yield Return</span>
+                            <span id="forecast-yield" class="stat-value positive">+0.0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prediction Chart -->
+                <div class="chart-container glass-card">
+                    <div class="chart-header">
+                        <h3>30-Day Trend Forecasting Chart (with 95% Confidence Band)</h3>
+                    </div>
+                    <div id="forecast-price-chart" class="plotly-chart"></div>
+                </div>
+
+                <!-- Disclaimer and explanation -->
+                <div class="disclaimer-alert">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div>
+                        <strong>Disclaimer:</strong> This tool utilizes basic statistical trend modeling for informational purposes only. Stock prices are influenced by countless unpredictable macroeconomic factors, earnings releases, and news items. **This forecast is not financial advice.** Never trade solely based on trend extrapolation.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Stock Comparison -->
+            <div id="tab-comparison" class="tab-content">
+                <div class="glass-card comparison-controls-card">
+                    <h2><i class="fa-solid fa-code-compare"></i> Portfolio Return Comparison</h2>
+                    <p>Compare the historical percentage return of multiple stocks relative to the start of the timeframe. The prices are normalized to 0% at the starting date.</p>
+                    
+                    <div class="comparison-input-bar">
+                        <div class="ticker-input-tags" id="comparison-tags-container">
+                            <!-- Selected comparison tickers will appear here -->
+                            <div class="compare-tag" data-symbol="AAPL">AAPL <i class="fa-solid fa-xmark compare-remove" onclick="removeCompareTicker('AAPL')"></i></div>
+                            <div class="compare-tag" data-symbol="MSFT">MSFT <i class="fa-solid fa-xmark compare-remove" onclick="removeCompareTicker('MSFT')"></i></div>
+                        </div>
+                        <div class="comparison-add-inputs">
+                            <input type="text" id="compare-input" placeholder="Type symbol (e.g. NVDA, GOOGL)" autocomplete="off">
+                            <button id="btn-add-compare" class="btn-primary">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Chart -->
+                <div class="chart-container glass-card">
+                    <div class="chart-header">
+                        <h3>Normalized Historical Performance Comparison Chart (% Returns)</h3>
+                    </div>
+                    <div id="comparison-chart" class="plotly-chart"></div>
+                </div>
+            </div>
+            
+        </section>
+    </main>
+
+    <!-- Company Profile Modal Details (Read More) -->
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h2 id="modal-company-title">Company Profile</h2>
+                <button class="modal-close-btn" id="modal-close"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-details-grid">
+                    <div>
+                        <strong>Sector:</strong> <span id="modal-sector">Technology</span>
+                    </div>
+                    <div>
+                        <strong>Industry:</strong> <span id="modal-industry">Consumer Electronics</span>
+                    </div>
+                </div>
+                <div class="modal-description-wrapper">
+                    <h3>Business Description</h3>
+                    <p id="modal-description">Detailed description will load here...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script imports -->
+    <!-- Autocomplete Tickers Database -->
+    <script src="{{ url_for('static', filename='js/tickers.js') }}"></script>
+    <!-- Core Application Logic -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
